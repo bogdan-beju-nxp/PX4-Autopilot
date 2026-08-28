@@ -1475,6 +1475,24 @@ void Navigator::check_traffic()
 }
 #endif // CONFIG_NAVIGATOR_ADSB
 
+bool Navigator::fw_climbout_completed()
+{
+	if (_pos_sp_triplet.current.type != position_setpoint_s::SETPOINT_TYPE_TAKEOFF) {
+		// no takeoff is being flown, for example because the mode was entered while already in air
+		return true;
+	}
+
+	fixed_wing_takeoff_status_s fixed_wing_takeoff_status;
+
+	if (_fw_takeoff_status_sub.copy(&fixed_wing_takeoff_status)) {
+		// the report has to be newer than the setpoint, as it could otherwise still refer to a previous takeoff
+		return fixed_wing_takeoff_status.climbout_completed
+		       && fixed_wing_takeoff_status.timestamp > _pos_sp_triplet.timestamp;
+	}
+
+	return false;
+}
+
 bool Navigator::abort_landing()
 {
 	// only abort if currently landing and position controller status updated
