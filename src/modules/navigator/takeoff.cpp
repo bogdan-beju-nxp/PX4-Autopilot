@@ -82,6 +82,10 @@ Takeoff::on_active()
 					_mission_item.time_inside = 1.f;
 					_mission_item.loiter_radius = _navigator->get_default_loiter_rad();
 					_mission_item.acceptance_radius  = _navigator->get_acceptance_radius();
+
+					// the climbout does not necessarily end at the loiter altitude, and the vehicle should
+					// not descend back to it if it ended up higher
+					_loiter_altitude_msl = math::max(_loiter_altitude_msl, _navigator->get_global_position()->alt);
 					_mission_item.altitude = _loiter_altitude_msl;
 
 					mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
