@@ -2460,15 +2460,35 @@ FixedWingModeManager::reset_takeoff_state()
 
 	_time_launch_detected = 0;
 
+	_time_climbout_started = 0;
+
 	_takeoff_ground_alt = _current_altitude;
 }
 
 void
 FixedWingModeManager::publishTakeoffStatus(const bool waiting_for_launch, const float clearance_altitude_amsl)
 {
+	const hrt_abstime now = hrt_absolute_time();
+
+	if (!waiting_for_launch && _time_climbout_started == 0) {
+		// the vehicle just started climbing, either off the launcher or off the runway
+		_time_climbout_started = now;
+	}
+
+	bool climbout_completed = false;
+
+	if (!waiting_for_launch) {
+		if (_param_fw_tko_clmb_t.get() > FLT_EPSILON) {
+			climbout_completed = hrt_elapsed_time(&_time_climbout_started) >= _param_fw_tko_clmb_t.get() * 1_s;
+
+		} else {
+			climbout_completed = _current_altitude >= clearance_altitude_amsl;
+		}
+	}
+
 	fixed_wing_takeoff_status_s fixed_wing_takeoff_status{};
-	fixed_wing_takeoff_status.timestamp = hrt_absolute_time();
-	fixed_wing_takeoff_status.climbout_completed = !waiting_for_launch && _current_altitude >= clearance_altitude_amsl;
+	fixed_wing_takeoff_status.timestamp = now;
+	fixed_wing_takeoff_status.climbout_completed = climbout_completed;
 
 	_fixed_wing_takeoff_status_pub.publish(fixed_wing_takeoff_status);
 }
